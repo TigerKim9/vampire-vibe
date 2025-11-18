@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vampire Vibe - 뱀파이어 서바이버 게임</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui">
+            <div id="stats">
+                <div class="stat-item">
+                    <span class="stat-label">HP:</span>
+                    <div class="stat-bar">
+                        <div id="health-bar" class="bar-fill"></div>
+                    </div>
+                    <span id="health-text">100/100</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">XP:</span>
+                    <div class="stat-bar">
+                        <div id="xp-bar" class="bar-fill xp"></div>
+                    </div>
+                    <span id="xp-text">0/10</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">레벨:</span>
+                    <span id="level-text">1</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">시간:</span>
+                    <span id="time-text">0:00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">처치:</span>
+                    <span id="kill-text">0</span>
+                </div>
+            </div>
+        </div>
+        <canvas id="game-canvas"></canvas>
+
+        <div id="level-up-menu" class="hidden">
+            <h2>레벨 업!</h2>
+            <p>능력을 선택하세요:</p>
+            <div id="upgrade-options"></div>
+        </div>
+
+        <div id="game-over-menu" class="hidden">
+            <h1>게임 오버</h1>
+            <div class="final-stats">
+                <p>생존 시간: <span id="final-time">0:00</span></p>
+                <p>처치한 적: <span id="final-kills">0</span></p>
+                <p>최종 레벨: <span id="final-level">1</span></p>
+            </div>
+            <button id="restart-btn">다시 시작</button>
+        </div>
+
+        <div id="start-menu">
+            <h1>🧛 Vampire Vibe</h1>
+            <p>WASD 또는 화살표 키로 이동하세요</p>
+            <p>무기는 자동으로 공격합니다</p>
+            <button id="start-btn">게임 시작</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
