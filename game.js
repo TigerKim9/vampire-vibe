@@ -23,12 +23,17 @@ class Player {
         this.xp = 0;
         this.xpToNext = 10;
         this.weapons = [];
+        this.passiveItems = [];
         this.stats = {
             damage: 1,
             speed: 1,
             maxHealth: 100,
             regeneration: 0,
-            pickupRange: 50
+            pickupRange: 50,
+            armor: 0,
+            critChance: 0,
+            critDamage: 1.5,
+            xpMultiplier: 1
         };
     }
 
@@ -82,7 +87,8 @@ class Player {
     }
 
     takeDamage(amount) {
-        this.health -= amount;
+        const actualDamage = amount * (1 - this.stats.armor);
+        this.health -= actualDamage;
         if (this.health <= 0) {
             this.health = 0;
             return true; // Player died
@@ -91,7 +97,7 @@ class Player {
     }
 
     gainXP(amount) {
-        this.xp += amount;
+        this.xp += Math.floor(amount * this.stats.xpMultiplier);
         if (this.xp >= this.xpToNext) {
             this.levelUp();
             return true;
@@ -420,6 +426,318 @@ class Lightning extends Weapon {
     }
 }
 
+// Holy Water weapon
+class HolyWater extends Weapon {
+    constructor(player) {
+        super(player, '성수', 6, 2500);
+        this.poolDuration = 3000;
+        this.poolRadius = 60;
+    }
+
+    attack(enemies, projectiles) {
+        if (enemies.length === 0) return;
+
+        const target = enemies[Math.floor(Math.random() * Math.min(5, enemies.length))];
+
+        const pool = {
+            x: target.x,
+            y: target.y,
+            radius: this.poolRadius,
+            damage: this.damage * this.player.stats.damage,
+            duration: this.poolDuration,
+            age: 0,
+            isHolyWater: true,
+            color: '#22b8cf'
+        };
+
+        projectiles.push(pool);
+    }
+
+    upgrade() {
+        super.upgrade();
+        this.poolRadius += 10;
+        this.poolDuration += 500;
+    }
+}
+
+// Garlic Aura weapon
+class GarlicAura extends Weapon {
+    constructor(player) {
+        super(player, '마늘 오라', 3, 500);
+        this.radius = 80;
+        this.rotation = 0;
+    }
+
+    update(deltaTime, enemies, projectiles) {
+        this.rotation += deltaTime * 0.002;
+        this.timer -= deltaTime;
+
+        if (this.timer <= 0) {
+            this.attack(enemies, projectiles);
+            this.timer = this.cooldown;
+        }
+    }
+
+    attack(enemies, projectiles) {
+        enemies.forEach(enemy => {
+            const dx = enemy.x - this.player.x;
+            const dy = enemy.y - this.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < this.radius + enemy.radius) {
+                enemy.takeDamage(this.damage * this.player.stats.damage * 0.016);
+            }
+        });
+    }
+
+    draw() {
+        ctx.strokeStyle = 'rgba(250, 250, 250, 0.3)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(this.player.x, this.player.y, this.radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Draw garlic symbols
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2 + this.rotation;
+            const x = this.player.x + Math.cos(angle) * this.radius;
+            const y = this.player.y + Math.sin(angle) * this.radius;
+
+            ctx.fillStyle = '#f8f9fa';
+            ctx.font = '20px Arial';
+            ctx.fillText('🧄', x - 10, y + 7);
+        }
+    }
+
+    upgrade() {
+        super.upgrade();
+        this.radius += 15;
+    }
+}
+
+// Boomerang weapon
+class Boomerang extends Weapon {
+    constructor(player) {
+        super(player, '부메랑', 7, 1500);
+        this.count = 1;
+    }
+
+    attack(enemies, projectiles) {
+        for (let i = 0; i < this.count; i++) {
+            const angle = (i / this.count) * Math.PI * 2;
+            const boomerang = {
+                x: this.player.x,
+                y: this.player.y,
+                angle: angle,
+                distance: 0,
+                maxDistance: 200,
+                returning: false,
+                speed: 5,
+                damage: this.damage * this.player.stats.damage,
+                radius: 10,
+                isBoomerang: true,
+                color: '#fab005',
+                rotation: 0,
+                player: this.player
+            };
+            projectiles.push(boomerang);
+        }
+    }
+
+    upgrade() {
+        super.upgrade();
+        if (this.level % 3 === 0) {
+            this.count++;
+        }
+    }
+}
+
+// Laser weapon
+class Laser extends Weapon {
+    constructor(player) {
+        super(player, '레이저', 15, 3500);
+        this.width = 20;
+        this.length = 600;
+    }
+
+    attack(enemies, projectiles) {
+        if (enemies.length === 0) return;
+
+        const target = enemies[0];
+        const angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+
+        const laser = {
+            x: this.player.x,
+            y: this.player.y,
+            angle: angle,
+            width: this.width,
+            length: this.length,
+            damage: this.damage * this.player.stats.damage,
+            duration: 500,
+            age: 0,
+            isLaser: true,
+            color: '#ff6b6b',
+            hitEnemies: new Set()
+        };
+
+        projectiles.push(laser);
+    }
+
+    upgrade() {
+        super.upgrade();
+        this.width += 5;
+        this.length += 50;
+    }
+}
+
+// Axe weapon
+class Axe extends Weapon {
+    constructor(player) {
+        super(player, '도끼', 10, 1200);
+        this.count = 1;
+        this.orbitRadius = 80;
+    }
+
+    attack(enemies, projectiles) {
+        // Axes orbit around player continuously
+    }
+
+    update(deltaTime, enemies, projectiles) {
+        // Create orbiting axes if they don't exist
+        const existingAxes = projectiles.filter(p => p.isAxe && p.weaponId === this);
+
+        if (existingAxes.length < this.count) {
+            for (let i = existingAxes.length; i < this.count; i++) {
+                const axe = {
+                    angle: (i / this.count) * Math.PI * 2,
+                    radius: this.orbitRadius,
+                    speed: 0.003,
+                    damage: this.damage * this.player.stats.damage,
+                    size: 15,
+                    isAxe: true,
+                    weaponId: this,
+                    player: this.player,
+                    rotation: 0,
+                    color: '#868e96',
+                    hitCooldown: {},
+                    update: function(deltaTime) {
+                        this.angle += this.speed * deltaTime;
+                        this.rotation += deltaTime * 0.01;
+                        this.x = this.player.x + Math.cos(this.angle) * this.radius;
+                        this.y = this.player.y + Math.sin(this.angle) * this.radius;
+                        return true;
+                    },
+                    draw: function() {
+                        ctx.save();
+                        ctx.translate(this.x, this.y);
+                        ctx.rotate(this.rotation);
+                        ctx.fillStyle = this.color;
+                        ctx.fillRect(-this.size, -this.size/3, this.size*2, this.size*2/3);
+                        ctx.fillRect(-this.size/3, -this.size, this.size*2/3, this.size*2);
+                        ctx.restore();
+                    }
+                };
+                axe.x = this.player.x;
+                axe.y = this.player.y;
+                projectiles.push(axe);
+            }
+        }
+    }
+
+    upgrade() {
+        super.upgrade();
+        if (this.level % 2 === 0) {
+            this.count++;
+        }
+        this.orbitRadius += 10;
+    }
+}
+
+// Passive Item base class
+class PassiveItem {
+    constructor(player, name, description) {
+        this.player = player;
+        this.name = name;
+        this.description = description;
+        this.level = 1;
+    }
+
+    apply() {
+        // Override in subclasses
+    }
+
+    upgrade() {
+        this.level++;
+        this.apply();
+    }
+}
+
+// Armor passive item
+class Armor extends PassiveItem {
+    constructor(player) {
+        super(player, '방어구', '받는 데미지 감소');
+    }
+
+    apply() {
+        this.player.stats.armor = Math.min(0.5, this.level * 0.05);
+    }
+}
+
+// Wings passive item
+class Wings extends PassiveItem {
+    constructor(player) {
+        super(player, '날개', '이동 속도 증가');
+    }
+
+    apply() {
+        this.player.speed = 3 + (this.level * 0.3);
+    }
+}
+
+// Spinach passive item
+class Spinach extends PassiveItem {
+    constructor(player) {
+        super(player, '시금치', '공격력 증가');
+    }
+
+    apply() {
+        this.player.stats.damage = 1 + (this.level * 0.15);
+    }
+}
+
+// Clover passive item
+class Clover extends PassiveItem {
+    constructor(player) {
+        super(player, '클로버', '크리티컬 확률 증가');
+    }
+
+    apply() {
+        this.player.stats.critChance = Math.min(0.5, this.level * 0.08);
+    }
+}
+
+// Crown passive item
+class Crown extends PassiveItem {
+    constructor(player) {
+        super(player, '왕관', '경험치 획득량 증가');
+    }
+
+    apply() {
+        this.player.stats.xpMultiplier = 1 + (this.level * 0.1);
+    }
+}
+
+// Magnet passive item
+class Magnet extends PassiveItem {
+    constructor(player) {
+        super(player, '자석', '경험치 습득 범위 증가');
+    }
+
+    apply() {
+        this.player.stats.pickupRange = 50 + (this.level * 20);
+    }
+}
+
 // Game class
 class Game {
     constructor() {
@@ -542,7 +860,129 @@ class Game {
 
         // Update projectiles
         this.projectiles = this.projectiles.filter(proj => {
-            const alive = proj.update(deltaTime);
+            // Handle different projectile types
+            if (proj.isHolyWater) {
+                proj.age += deltaTime;
+                if (proj.age >= proj.duration) return false;
+
+                // Damage enemies in pool
+                this.enemies.forEach(enemy => {
+                    const dx = enemy.x - proj.x;
+                    const dy = enemy.y - proj.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < proj.radius) {
+                        enemy.takeDamage(proj.damage * 0.016);
+                    }
+                });
+                return true;
+            }
+
+            if (proj.isBoomerang) {
+                proj.rotation += deltaTime * 0.01;
+
+                if (!proj.returning) {
+                    proj.x += Math.cos(proj.angle) * proj.speed;
+                    proj.y += Math.sin(proj.angle) * proj.speed;
+                    proj.distance += proj.speed;
+
+                    if (proj.distance >= proj.maxDistance) {
+                        proj.returning = true;
+                    }
+                } else {
+                    const dx = proj.player.x - proj.x;
+                    const dy = proj.player.y - proj.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 20) return false;
+
+                    proj.x += (dx / dist) * proj.speed;
+                    proj.y += (dy / dist) * proj.speed;
+                }
+
+                // Check collision with enemies
+                for (let i = this.enemies.length - 1; i >= 0; i--) {
+                    const enemy = this.enemies[i];
+                    const dx = proj.x - enemy.x;
+                    const dy = proj.y - enemy.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < proj.radius + enemy.radius) {
+                        const died = enemy.takeDamage(proj.damage);
+                        if (died) {
+                            this.killCount++;
+                            this.experienceGems.push(new ExperienceGem(enemy.x, enemy.y, enemy.xpValue));
+                            this.enemies.splice(i, 1);
+                        }
+                    }
+                }
+                return true;
+            }
+
+            if (proj.isLaser) {
+                proj.age += deltaTime;
+                if (proj.age >= proj.duration) return false;
+
+                // Check collision with all enemies in laser path
+                this.enemies.forEach(enemy => {
+                    if (proj.hitEnemies.has(enemy)) return;
+
+                    const endX = proj.x + Math.cos(proj.angle) * proj.length;
+                    const endY = proj.y + Math.sin(proj.angle) * proj.length;
+
+                    // Point to line distance
+                    const dx = endX - proj.x;
+                    const dy = endY - proj.y;
+                    const len = Math.sqrt(dx * dx + dy * dy);
+                    const dot = ((enemy.x - proj.x) * dx + (enemy.y - proj.y) * dy) / (len * len);
+
+                    if (dot >= 0 && dot <= 1) {
+                        const closestX = proj.x + dot * dx;
+                        const closestY = proj.y + dot * dy;
+                        const dist = Math.sqrt((enemy.x - closestX) ** 2 + (enemy.y - closestY) ** 2);
+
+                        if (dist < proj.width / 2 + enemy.radius) {
+                            proj.hitEnemies.add(enemy);
+                            const died = enemy.takeDamage(proj.damage);
+                            if (died) {
+                                this.killCount++;
+                                this.experienceGems.push(new ExperienceGem(enemy.x, enemy.y, enemy.xpValue));
+                                const idx = this.enemies.indexOf(enemy);
+                                if (idx > -1) this.enemies.splice(idx, 1);
+                            }
+                        }
+                    }
+                });
+                return true;
+            }
+
+            if (proj.isAxe) {
+                if (proj.update) proj.update(deltaTime);
+
+                // Check collision with enemies (with cooldown per enemy)
+                this.enemies.forEach(enemy => {
+                    const now = Date.now();
+                    if (proj.hitCooldown[enemy] && now - proj.hitCooldown[enemy] < 500) return;
+
+                    const dx = proj.x - enemy.x;
+                    const dy = proj.y - enemy.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < proj.size + enemy.radius) {
+                        proj.hitCooldown[enemy] = now;
+                        const died = enemy.takeDamage(proj.damage);
+                        if (died) {
+                            this.killCount++;
+                            this.experienceGems.push(new ExperienceGem(enemy.x, enemy.y, enemy.xpValue));
+                            const idx = this.enemies.indexOf(enemy);
+                            if (idx > -1) this.enemies.splice(idx, 1);
+                        }
+                    }
+                });
+                return true;
+            }
+
+            // Regular projectiles
+            const alive = proj.update ? proj.update(deltaTime) : true;
             if (!alive) return false;
 
             // Check collision with enemies
@@ -649,7 +1089,59 @@ class Game {
         this.enemies.forEach(enemy => enemy.draw());
 
         // Draw projectiles
-        this.projectiles.forEach(proj => proj.draw());
+        this.projectiles.forEach(proj => {
+            if (proj.isHolyWater) {
+                // Draw holy water pool
+                ctx.fillStyle = `rgba(34, 184, 207, ${0.3 * (1 - proj.age / proj.duration)})`;
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = proj.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            } else if (proj.isBoomerang) {
+                // Draw boomerang
+                ctx.save();
+                ctx.translate(proj.x, proj.y);
+                ctx.rotate(proj.rotation);
+                ctx.fillStyle = proj.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, proj.radius * 2, proj.radius, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+            } else if (proj.isLaser) {
+                // Draw laser beam
+                ctx.save();
+                ctx.globalAlpha = 0.8 * (1 - proj.age / proj.duration);
+                ctx.strokeStyle = proj.color;
+                ctx.lineWidth = proj.width;
+                ctx.shadowColor = proj.color;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.moveTo(proj.x, proj.y);
+                const endX = proj.x + Math.cos(proj.angle) * proj.length;
+                const endY = proj.y + Math.sin(proj.angle) * proj.length;
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+                ctx.restore();
+            } else if (proj.isAxe) {
+                // Draw axe (custom draw function)
+                if (proj.draw) proj.draw();
+            } else if (proj.draw) {
+                // Regular projectile draw
+                proj.draw();
+            }
+        });
+
+        // Draw garlic auras
+        this.player.weapons.forEach(weapon => {
+            if (weapon instanceof GarlicAura) {
+                weapon.draw();
+            }
+        });
 
         // Draw player
         this.player.draw();
@@ -763,6 +1255,150 @@ class Game {
                         this.player.addWeapon(new Lightning(this.player));
                     }
                 }
+            },
+            {
+                name: '성수',
+                description: '땅에 데미지를 주는 성수를 투척합니다 (새 무기)',
+                apply: () => {
+                    const hasWeapon = this.player.weapons.some(w => w instanceof HolyWater);
+                    if (hasWeapon) {
+                        this.player.weapons.find(w => w instanceof HolyWater).upgrade();
+                    } else {
+                        this.player.addWeapon(new HolyWater(this.player));
+                    }
+                }
+            },
+            {
+                name: '마늘 오라',
+                description: '주변에 지속 데미지를 주는 마늘 오라 (새 무기)',
+                apply: () => {
+                    const hasWeapon = this.player.weapons.some(w => w instanceof GarlicAura);
+                    if (hasWeapon) {
+                        this.player.weapons.find(w => w instanceof GarlicAura).upgrade();
+                    } else {
+                        this.player.addWeapon(new GarlicAura(this.player));
+                    }
+                }
+            },
+            {
+                name: '부메랑',
+                description: '되돌아오는 부메랑을 발사합니다 (새 무기)',
+                apply: () => {
+                    const hasWeapon = this.player.weapons.some(w => w instanceof Boomerang);
+                    if (hasWeapon) {
+                        this.player.weapons.find(w => w instanceof Boomerang).upgrade();
+                    } else {
+                        this.player.addWeapon(new Boomerang(this.player));
+                    }
+                }
+            },
+            {
+                name: '레이저',
+                description: '관통하는 레이저 빔을 발사합니다 (새 무기)',
+                apply: () => {
+                    const hasWeapon = this.player.weapons.some(w => w instanceof Laser);
+                    if (hasWeapon) {
+                        this.player.weapons.find(w => w instanceof Laser).upgrade();
+                    } else {
+                        this.player.addWeapon(new Laser(this.player));
+                    }
+                }
+            },
+            {
+                name: '도끼',
+                description: '주변을 회전하는 도끼 (새 무기)',
+                apply: () => {
+                    const hasWeapon = this.player.weapons.some(w => w instanceof Axe);
+                    if (hasWeapon) {
+                        this.player.weapons.find(w => w instanceof Axe).upgrade();
+                    } else {
+                        this.player.addWeapon(new Axe(this.player));
+                    }
+                }
+            },
+            {
+                name: '방어구',
+                description: `받는 데미지 ${Math.floor((this.player.stats.armor + 0.05) * 100)}% 감소`,
+                apply: () => {
+                    const hasItem = this.player.passiveItems.some(i => i instanceof Armor);
+                    if (hasItem) {
+                        this.player.passiveItems.find(i => i instanceof Armor).upgrade();
+                    } else {
+                        const item = new Armor(this.player);
+                        item.apply();
+                        this.player.passiveItems.push(item);
+                    }
+                }
+            },
+            {
+                name: '날개',
+                description: '이동 속도 대폭 증가',
+                apply: () => {
+                    const hasItem = this.player.passiveItems.some(i => i instanceof Wings);
+                    if (hasItem) {
+                        this.player.passiveItems.find(i => i instanceof Wings).upgrade();
+                    } else {
+                        const item = new Wings(this.player);
+                        item.apply();
+                        this.player.passiveItems.push(item);
+                    }
+                }
+            },
+            {
+                name: '시금치',
+                description: '공격력 대폭 증가',
+                apply: () => {
+                    const hasItem = this.player.passiveItems.some(i => i instanceof Spinach);
+                    if (hasItem) {
+                        this.player.passiveItems.find(i => i instanceof Spinach).upgrade();
+                    } else {
+                        const item = new Spinach(this.player);
+                        item.apply();
+                        this.player.passiveItems.push(item);
+                    }
+                }
+            },
+            {
+                name: '클로버',
+                description: `크리티컬 확률 ${Math.floor((this.player.stats.critChance + 0.08) * 100)}%`,
+                apply: () => {
+                    const hasItem = this.player.passiveItems.some(i => i instanceof Clover);
+                    if (hasItem) {
+                        this.player.passiveItems.find(i => i instanceof Clover).upgrade();
+                    } else {
+                        const item = new Clover(this.player);
+                        item.apply();
+                        this.player.passiveItems.push(item);
+                    }
+                }
+            },
+            {
+                name: '왕관',
+                description: '경험치 획득량 증가',
+                apply: () => {
+                    const hasItem = this.player.passiveItems.some(i => i instanceof Crown);
+                    if (hasItem) {
+                        this.player.passiveItems.find(i => i instanceof Crown).upgrade();
+                    } else {
+                        const item = new Crown(this.player);
+                        item.apply();
+                        this.player.passiveItems.push(item);
+                    }
+                }
+            },
+            {
+                name: '자석',
+                description: '경험치 습득 범위 대폭 증가',
+                apply: () => {
+                    const hasItem = this.player.passiveItems.some(i => i instanceof Magnet);
+                    if (hasItem) {
+                        this.player.passiveItems.find(i => i instanceof Magnet).upgrade();
+                    } else {
+                        const item = new Magnet(this.player);
+                        item.apply();
+                        this.player.passiveItems.push(item);
+                    }
+                }
             }
         ];
 
@@ -773,6 +1409,17 @@ class Game {
                 description: `${weapon.name}의 위력을 강화합니다 (레벨 ${weapon.level} → ${weapon.level + 1})`,
                 apply: () => {
                     weapon.upgrade();
+                }
+            });
+        });
+
+        // Add passive item upgrades for existing items
+        this.player.passiveItems.forEach(item => {
+            allUpgrades.push({
+                name: `${item.name} 강화`,
+                description: `${item.description} 효과 증가 (레벨 ${item.level} → ${item.level + 1})`,
+                apply: () => {
+                    item.upgrade();
                 }
             });
         });
