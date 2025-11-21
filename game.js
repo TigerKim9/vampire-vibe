@@ -500,13 +500,14 @@ class ExperienceGem {
 
 // Weapon base class
 class Weapon {
-    constructor(player, name, damage, cooldown) {
+    constructor(player, name, damage, cooldown, icon = '⚔️') {
         this.player = player;
         this.name = name;
         this.damage = damage;
         this.cooldown = cooldown;
         this.timer = 0;
         this.level = 1;
+        this.icon = icon;
     }
 
     update(deltaTime, enemies, projectiles, game) {
@@ -526,7 +527,7 @@ class Weapon {
 // Magic Missile weapon
 class MagicMissile extends Weapon {
     constructor(player) {
-        super(player, '마법 미사일', 5, 1000);
+        super(player, '마법 미사일', 5, 1000, '🔮');
         this.projectileCount = 1;
     }
 
@@ -570,7 +571,7 @@ class MagicMissile extends Weapon {
 // Fireball weapon
 class Fireball extends Weapon {
     constructor(player) {
-        super(player, '화염구', 8, 2000);
+        super(player, '화염구', 8, 2000, '🔥');
         this.explosionRadius = 50;
     }
 
@@ -604,7 +605,7 @@ class Fireball extends Weapon {
 // Lightning weapon
 class Lightning extends Weapon {
     constructor(player) {
-        super(player, '번개', 12, 3000);
+        super(player, '번개', 12, 3000, '⚡');
         this.chainCount = 3;
     }
 
@@ -1570,176 +1571,152 @@ class Game {
                 apply: () => {
                     this.player.stats.pickupRange += 30;
                 }
-            },
-            {
+            }
+        ];
+
+        // Add new weapon options only if player doesn't have them yet
+        if (!this.player.weapons.some(w => w instanceof Fireball)) {
+            allUpgrades.push({
                 name: '화염구',
                 description: '폭발하는 화염구를 발사합니다 (새 무기)',
                 apply: () => {
-                    const hasWeapon = this.player.weapons.some(w => w instanceof Fireball);
-                    if (hasWeapon) {
-                        this.player.weapons.find(w => w instanceof Fireball).upgrade();
-                    } else {
-                        this.player.addWeapon(new Fireball(this.player));
-                    }
+                    this.player.addWeapon(new Fireball(this.player));
                 }
-            },
-            {
+            });
+        }
+
+        if (!this.player.weapons.some(w => w instanceof Lightning)) {
+            allUpgrades.push({
                 name: '번개',
                 description: '적들을 연쇄 타격하는 번개 공격 (새 무기)',
                 apply: () => {
-                    const hasWeapon = this.player.weapons.some(w => w instanceof Lightning);
-                    if (hasWeapon) {
-                        this.player.weapons.find(w => w instanceof Lightning).upgrade();
-                    } else {
-                        this.player.addWeapon(new Lightning(this.player));
-                    }
+                    this.player.addWeapon(new Lightning(this.player));
                 }
-            },
-            {
+            });
+        }
+
+        if (!this.player.weapons.some(w => w instanceof HolyWater)) {
+            allUpgrades.push({
                 name: '성수',
                 description: '땅에 데미지를 주는 성수를 투척합니다 (새 무기)',
                 apply: () => {
-                    const hasWeapon = this.player.weapons.some(w => w instanceof HolyWater);
-                    if (hasWeapon) {
-                        this.player.weapons.find(w => w instanceof HolyWater).upgrade();
-                    } else {
-                        this.player.addWeapon(new HolyWater(this.player));
-                    }
+                    this.player.addWeapon(new HolyWater(this.player));
                 }
-            },
-            {
+            });
+        }
+
+        if (!this.player.weapons.some(w => w instanceof GarlicAura)) {
+            allUpgrades.push({
                 name: '마늘 오라',
                 description: '주변에 지속 데미지를 주는 마늘 오라 (새 무기)',
                 apply: () => {
-                    const hasWeapon = this.player.weapons.some(w => w instanceof GarlicAura);
-                    if (hasWeapon) {
-                        this.player.weapons.find(w => w instanceof GarlicAura).upgrade();
-                    } else {
-                        this.player.addWeapon(new GarlicAura(this.player));
-                    }
+                    this.player.addWeapon(new GarlicAura(this.player));
                 }
-            },
-            {
+            });
+        }
+
+        if (!this.player.weapons.some(w => w instanceof Boomerang)) {
+            allUpgrades.push({
                 name: '부메랑',
                 description: '되돌아오는 부메랑을 발사합니다 (새 무기)',
                 apply: () => {
-                    const hasWeapon = this.player.weapons.some(w => w instanceof Boomerang);
-                    if (hasWeapon) {
-                        this.player.weapons.find(w => w instanceof Boomerang).upgrade();
-                    } else {
-                        this.player.addWeapon(new Boomerang(this.player));
-                    }
+                    this.player.addWeapon(new Boomerang(this.player));
                 }
-            },
-            {
+            });
+        }
+
+        if (!this.player.weapons.some(w => w instanceof Laser)) {
+            allUpgrades.push({
                 name: '레이저',
                 description: '관통하는 레이저 빔을 발사합니다 (새 무기)',
                 apply: () => {
-                    const hasWeapon = this.player.weapons.some(w => w instanceof Laser);
-                    if (hasWeapon) {
-                        this.player.weapons.find(w => w instanceof Laser).upgrade();
-                    } else {
-                        this.player.addWeapon(new Laser(this.player));
-                    }
+                    this.player.addWeapon(new Laser(this.player));
                 }
-            },
-            {
+            });
+        }
+
+        if (!this.player.weapons.some(w => w instanceof Axe)) {
+            allUpgrades.push({
                 name: '도끼',
                 description: '주변을 회전하는 도끼 (새 무기)',
                 apply: () => {
-                    const hasWeapon = this.player.weapons.some(w => w instanceof Axe);
-                    if (hasWeapon) {
-                        this.player.weapons.find(w => w instanceof Axe).upgrade();
-                    } else {
-                        this.player.addWeapon(new Axe(this.player));
-                    }
+                    this.player.addWeapon(new Axe(this.player));
                 }
-            },
-            {
+            });
+        }
+
+        // Add new passive item options only if player doesn't have them yet
+        if (!this.player.passiveItems.some(i => i instanceof Armor)) {
+            allUpgrades.push({
                 name: '방어구',
-                description: `받는 데미지 ${Math.floor((this.player.stats.armor + 0.05) * 100)}% 감소`,
+                description: '받는 데미지 5% 감소',
                 apply: () => {
-                    const hasItem = this.player.passiveItems.some(i => i instanceof Armor);
-                    if (hasItem) {
-                        this.player.passiveItems.find(i => i instanceof Armor).upgrade();
-                    } else {
-                        const item = new Armor(this.player);
-                        item.apply();
-                        this.player.passiveItems.push(item);
-                    }
+                    const item = new Armor(this.player);
+                    item.apply();
+                    this.player.passiveItems.push(item);
                 }
-            },
-            {
+            });
+        }
+
+        if (!this.player.passiveItems.some(i => i instanceof Wings)) {
+            allUpgrades.push({
                 name: '날개',
                 description: '이동 속도 대폭 증가',
                 apply: () => {
-                    const hasItem = this.player.passiveItems.some(i => i instanceof Wings);
-                    if (hasItem) {
-                        this.player.passiveItems.find(i => i instanceof Wings).upgrade();
-                    } else {
-                        const item = new Wings(this.player);
-                        item.apply();
-                        this.player.passiveItems.push(item);
-                    }
+                    const item = new Wings(this.player);
+                    item.apply();
+                    this.player.passiveItems.push(item);
                 }
-            },
-            {
+            });
+        }
+
+        if (!this.player.passiveItems.some(i => i instanceof Spinach)) {
+            allUpgrades.push({
                 name: '시금치',
                 description: '공격력 대폭 증가',
                 apply: () => {
-                    const hasItem = this.player.passiveItems.some(i => i instanceof Spinach);
-                    if (hasItem) {
-                        this.player.passiveItems.find(i => i instanceof Spinach).upgrade();
-                    } else {
-                        const item = new Spinach(this.player);
-                        item.apply();
-                        this.player.passiveItems.push(item);
-                    }
+                    const item = new Spinach(this.player);
+                    item.apply();
+                    this.player.passiveItems.push(item);
                 }
-            },
-            {
+            });
+        }
+
+        if (!this.player.passiveItems.some(i => i instanceof Clover)) {
+            allUpgrades.push({
                 name: '클로버',
-                description: `크리티컬 확률 ${Math.floor((this.player.stats.critChance + 0.08) * 100)}%`,
+                description: '크리티컬 확률 8% 증가',
                 apply: () => {
-                    const hasItem = this.player.passiveItems.some(i => i instanceof Clover);
-                    if (hasItem) {
-                        this.player.passiveItems.find(i => i instanceof Clover).upgrade();
-                    } else {
-                        const item = new Clover(this.player);
-                        item.apply();
-                        this.player.passiveItems.push(item);
-                    }
+                    const item = new Clover(this.player);
+                    item.apply();
+                    this.player.passiveItems.push(item);
                 }
-            },
-            {
+            });
+        }
+
+        if (!this.player.passiveItems.some(i => i instanceof Crown)) {
+            allUpgrades.push({
                 name: '왕관',
                 description: '경험치 획득량 증가',
                 apply: () => {
-                    const hasItem = this.player.passiveItems.some(i => i instanceof Crown);
-                    if (hasItem) {
-                        this.player.passiveItems.find(i => i instanceof Crown).upgrade();
-                    } else {
-                        const item = new Crown(this.player);
-                        item.apply();
-                        this.player.passiveItems.push(item);
-                    }
+                    const item = new Crown(this.player);
+                    item.apply();
+                    this.player.passiveItems.push(item);
                 }
-            },
-            {
+            });
+        }
+
+        if (!this.player.passiveItems.some(i => i instanceof Magnet)) {
+            allUpgrades.push({
                 name: '자석',
                 description: '경험치 습득 범위 대폭 증가',
                 apply: () => {
-                    const hasItem = this.player.passiveItems.some(i => i instanceof Magnet);
-                    if (hasItem) {
-                        this.player.passiveItems.find(i => i instanceof Magnet).upgrade();
-                    } else {
-                        const item = new Magnet(this.player);
-                        item.apply();
-                        this.player.passiveItems.push(item);
-                    }
+                    const item = new Magnet(this.player);
+                    item.apply();
+                    this.player.passiveItems.push(item);
                 }
-            }
-        ];
+            });
+        }
 
         // Add weapon upgrades for existing weapons
         this.player.weapons.forEach(weapon => {
