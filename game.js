@@ -122,6 +122,9 @@ class Enemy {
         this.x = x;
         this.y = y;
         this.type = type;
+        this.shootTimer = 0;
+        this.teleportTimer = 0;
+        this.healTimer = 0;
 
         if (type === 'normal') {
             this.radius = 12;
@@ -147,19 +150,194 @@ class Enemy {
             this.damage = 10;
             this.xpValue = 5;
             this.color = '#f06595';
+        } else if (type === 'boss') {
+            this.radius = 35;
+            this.speed = 0.5;
+            this.health = 100;
+            this.maxHealth = 100;
+            this.damage = 20;
+            this.xpValue = 50;
+            this.color = '#8b0000';
+            this.isBoss = true;
+        } else if (type === 'shooter') {
+            this.radius = 13;
+            this.speed = 1.2;
+            this.health = 4;
+            this.maxHealth = 4;
+            this.damage = 4;
+            this.xpValue = 3;
+            this.color = '#ff6347';
+            this.shootCooldown = 3000;
+            this.keepDistance = 200;
+        } else if (type === 'explosive') {
+            this.radius = 11;
+            this.speed = 2.0;
+            this.health = 3;
+            this.maxHealth = 3;
+            this.damage = 8;
+            this.xpValue = 3;
+            this.color = '#ff8c00';
+            this.explosionRadius = 80;
+            this.explosionDamage = 15;
+        } else if (type === 'splitter') {
+            this.radius = 14;
+            this.speed = 1.3;
+            this.health = 5;
+            this.maxHealth = 5;
+            this.damage = 6;
+            this.xpValue = 4;
+            this.color = '#9d4edd';
+            this.splitCount = 3;
+        } else if (type === 'mini') {
+            this.radius = 8;
+            this.speed = 2.2;
+            this.health = 1;
+            this.maxHealth = 1;
+            this.damage = 3;
+            this.xpValue = 1;
+            this.color = '#c77dff';
+            this.isMini = true;
+        } else if (type === 'healer') {
+            this.radius = 13;
+            this.speed = 1.0;
+            this.health = 6;
+            this.maxHealth = 6;
+            this.damage = 4;
+            this.xpValue = 5;
+            this.color = '#06ffa5';
+            this.healCooldown = 4000;
+            this.healAmount = 2;
+            this.healRange = 150;
+        } else if (type === 'teleporter') {
+            this.radius = 12;
+            this.speed = 1.8;
+            this.health = 4;
+            this.maxHealth = 4;
+            this.damage = 6;
+            this.xpValue = 4;
+            this.color = '#a78bfa';
+            this.teleportCooldown = 5000;
+            this.teleportRange = 250;
         }
     }
 
-    update(player) {
-        // Move towards player
+    update(player, deltaTime, game) {
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist > 0) {
-            this.x += (dx / dist) * this.speed;
-            this.y += (dy / dist) * this.speed;
+        // Type-specific behavior
+        if (this.type === 'shooter') {
+            // Keep distance from player and shoot
+            this.shootTimer += deltaTime;
+
+            if (dist < this.keepDistance) {
+                // Move away from player
+                this.x -= (dx / dist) * this.speed;
+                this.y -= (dy / dist) * this.speed;
+            } else if (dist > this.keepDistance + 50) {
+                // Move towards player
+                this.x += (dx / dist) * this.speed * 0.5;
+                this.y += (dy / dist) * this.speed * 0.5;
+            }
+
+            if (this.shootTimer >= this.shootCooldown && game) {
+                this.shootAtPlayer(player, game);
+                this.shootTimer = 0;
+            }
+        } else if (this.type === 'healer') {
+            // Stay back and heal nearby enemies
+            this.healTimer += deltaTime;
+
+            if (dist > 100) {
+                this.x += (dx / dist) * this.speed;
+                this.y += (dy / dist) * this.speed;
+            }
+
+            if (this.healTimer >= this.healCooldown && game) {
+                this.healNearbyEnemies(game.enemies);
+                this.healTimer = 0;
+            }
+        } else if (this.type === 'teleporter') {
+            // Teleport closer to player periodically
+            this.teleportTimer += deltaTime;
+
+            if (dist > 50) {
+                this.x += (dx / dist) * this.speed;
+                this.y += (dy / dist) * this.speed;
+            }
+
+            if (this.teleportTimer >= this.teleportCooldown && dist > this.teleportRange) {
+                this.teleportTowardsPlayer(player);
+                this.teleportTimer = 0;
+            }
+        } else {
+            // Normal movement towards player
+            if (dist > 0) {
+                this.x += (dx / dist) * this.speed;
+                this.y += (dy / dist) * this.speed;
+            }
         }
+    }
+
+    shootAtPlayer(player, game) {
+        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+        const projectile = {
+            x: this.x,
+            y: this.y,
+            vx: Math.cos(angle) * 3,
+            vy: Math.sin(angle) * 3,
+            radius: 6,
+            damage: this.damage,
+            isEnemyProjectile: true,
+            color: '#ff6347',
+            age: 0,
+            lifetime: 5000,
+            update: function(deltaTime) {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.age += deltaTime;
+                return this.age < this.lifetime &&
+                       this.x > 0 && this.x < GAME_WIDTH &&
+                       this.y > 0 && this.y < GAME_HEIGHT;
+            },
+            draw: function() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        };
+        game.enemyProjectiles.push(projectile);
+    }
+
+    healNearbyEnemies(enemies) {
+        enemies.forEach(enemy => {
+            if (enemy === this) return;
+
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < this.healRange) {
+                enemy.health = Math.min(enemy.maxHealth, enemy.health + this.healAmount);
+            }
+        });
+    }
+
+    teleportTowardsPlayer(player) {
+        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+        const teleportDistance = 150;
+
+        this.x += Math.cos(angle) * teleportDistance;
+        this.y += Math.sin(angle) * teleportDistance;
+
+        // Keep in bounds
+        this.x = Math.max(this.radius, Math.min(GAME_WIDTH - this.radius, this.x));
+        this.y = Math.max(this.radius, Math.min(GAME_HEIGHT - this.radius, this.y));
     }
 
     draw() {
@@ -169,16 +347,71 @@ class Enemy {
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
 
+        // Special visuals for different types
+        if (this.type === 'boss') {
+            // Boss glow effect
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 4;
+            ctx.shadowColor = '#ff0000';
+            ctx.shadowBlur = 15;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Boss crown
+            ctx.fillStyle = '#ffd700';
+            ctx.font = '30px Arial';
+            ctx.fillText('👑', this.x - 15, this.y - this.radius - 10);
+        } else if (this.type === 'explosive') {
+            // Pulsing effect
+            const pulseSize = Math.sin(Date.now() * 0.005) * 2;
+            ctx.strokeStyle = '#ff4500';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius + pulseSize, 0, Math.PI * 2);
+            ctx.stroke();
+        } else if (this.type === 'healer') {
+            // Plus sign
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(this.x - 5, this.y);
+            ctx.lineTo(this.x + 5, this.y);
+            ctx.moveTo(this.x, this.y - 5);
+            ctx.lineTo(this.x, this.y + 5);
+            ctx.stroke();
+        } else if (this.type === 'teleporter') {
+            // Sparkle effect
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 4; i++) {
+                const angle = (Date.now() * 0.002 + i * Math.PI / 2);
+                const x = this.x + Math.cos(angle) * (this.radius + 5);
+                const y = this.y + Math.sin(angle) * (this.radius + 5);
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (this.type === 'shooter') {
+            // Crosshair
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(this.x - 8, this.y);
+            ctx.lineTo(this.x + 8, this.y);
+            ctx.moveTo(this.x, this.y - 8);
+            ctx.lineTo(this.x, this.y + 8);
+            ctx.stroke();
+        }
+
         // Draw health bar
         if (this.health < this.maxHealth) {
             const barWidth = this.radius * 2;
-            const barHeight = 4;
-            const barY = this.y - this.radius - 8;
+            const barHeight = this.isBoss ? 6 : 4;
+            const barY = this.y - this.radius - (this.isBoss ? 15 : 8);
 
             ctx.fillStyle = '#333';
             ctx.fillRect(this.x - barWidth / 2, barY, barWidth, barHeight);
 
-            ctx.fillStyle = '#38d9a9';
+            ctx.fillStyle = this.isBoss ? '#ff0000' : '#38d9a9';
             ctx.fillRect(this.x - barWidth / 2, barY, barWidth * (this.health / this.maxHealth), barHeight);
         }
     }
@@ -744,6 +977,7 @@ class Game {
         this.player = new Player(GAME_WIDTH / 2, GAME_HEIGHT / 2);
         this.enemies = [];
         this.projectiles = [];
+        this.enemyProjectiles = [];
         this.experienceGems = [];
         this.keys = {};
         this.gameTime = 0;
@@ -752,6 +986,8 @@ class Game {
         this.isGameOver = false;
         this.enemySpawnTimer = 0;
         this.enemySpawnRate = 1000;
+        this.bossSpawnTimer = 0;
+        this.bossSpawnInterval = 60000; // Boss every 60 seconds
         this.lastTime = Date.now();
 
         this.setupEventListeners();
@@ -786,19 +1022,21 @@ class Game {
         this.player = new Player(GAME_WIDTH / 2, GAME_HEIGHT / 2);
         this.enemies = [];
         this.projectiles = [];
+        this.enemyProjectiles = [];
         this.experienceGems = [];
         this.gameTime = 0;
         this.killCount = 0;
         this.isPaused = false;
         this.isGameOver = false;
         this.enemySpawnTimer = 0;
+        this.bossSpawnTimer = 0;
         this.player.addWeapon(new MagicMissile(this.player));
 
         document.getElementById('game-over-menu').classList.add('hidden');
         this.start();
     }
 
-    spawnEnemy() {
+    spawnEnemy(forcedType = null) {
         const side = Math.floor(Math.random() * 4);
         let x, y;
 
@@ -821,12 +1059,76 @@ class Game {
                 break;
         }
 
-        let type = 'normal';
-        const rand = Math.random();
-        if (rand > 0.85) type = 'tank';
-        else if (rand > 0.65) type = 'fast';
+        let type = forcedType || 'normal';
+
+        if (!forcedType) {
+            const rand = Math.random();
+            const difficulty = Math.min(this.gameTime / 10000, 3); // Difficulty scales over time
+
+            // More enemy types appear as game progresses
+            if (difficulty > 2 && rand > 0.98) {
+                type = 'healer';
+            } else if (difficulty > 2 && rand > 0.96) {
+                type = 'teleporter';
+            } else if (difficulty > 1.5 && rand > 0.93) {
+                type = 'splitter';
+            } else if (difficulty > 1 && rand > 0.89) {
+                type = 'explosive';
+            } else if (difficulty > 1 && rand > 0.85) {
+                type = 'shooter';
+            } else if (rand > 0.82) {
+                type = 'tank';
+            } else if (rand > 0.65) {
+                type = 'fast';
+            }
+        }
 
         this.enemies.push(new Enemy(x, y, type));
+    }
+
+    spawnBoss() {
+        // Spawn boss in center-ish area
+        const x = GAME_WIDTH / 2 + (Math.random() - 0.5) * 200;
+        const y = GAME_HEIGHT / 2 + (Math.random() - 0.5) * 200;
+        this.enemies.push(new Enemy(x, y, 'boss'));
+    }
+
+    handleEnemyDeath(enemy) {
+        this.killCount++;
+        this.experienceGems.push(new ExperienceGem(enemy.x, enemy.y, enemy.xpValue));
+
+        // Special death effects
+        if (enemy.type === 'explosive') {
+            // Explosion damages nearby enemies and player
+            this.enemies.forEach(e => {
+                const dx = e.x - enemy.x;
+                const dy = e.y - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < enemy.explosionRadius) {
+                    e.takeDamage(enemy.explosionDamage);
+                }
+            });
+
+            // Check if player is in explosion range
+            const pdx = this.player.x - enemy.x;
+            const pdy = this.player.y - enemy.y;
+            const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+
+            if (pdist < enemy.explosionRadius) {
+                const died = this.player.takeDamage(enemy.explosionDamage);
+                if (died) this.gameOver();
+            }
+        } else if (enemy.type === 'splitter' && !enemy.isMini) {
+            // Spawn mini enemies
+            for (let i = 0; i < enemy.splitCount; i++) {
+                const angle = (i / enemy.splitCount) * Math.PI * 2;
+                const spawnDist = 30;
+                const x = enemy.x + Math.cos(angle) * spawnDist;
+                const y = enemy.y + Math.sin(angle) * spawnDist;
+                this.enemies.push(new Enemy(x, y, 'mini'));
+            }
+        }
     }
 
     update(deltaTime) {
@@ -847,11 +1149,18 @@ class Game {
             }
         }
 
+        // Spawn boss
+        this.bossSpawnTimer += deltaTime;
+        if (this.bossSpawnTimer >= this.bossSpawnInterval) {
+            this.spawnBoss();
+            this.bossSpawnTimer = 0;
+        }
+
         // Update player
         this.player.update(this.keys);
 
         // Update enemies
-        this.enemies.forEach(enemy => enemy.update(this.player));
+        this.enemies.forEach(enemy => enemy.update(this.player, deltaTime, this));
 
         // Update weapons
         this.player.weapons.forEach(weapon => {
@@ -909,8 +1218,7 @@ class Game {
                     if (dist < proj.radius + enemy.radius) {
                         const died = enemy.takeDamage(proj.damage);
                         if (died) {
-                            this.killCount++;
-                            this.experienceGems.push(new ExperienceGem(enemy.x, enemy.y, enemy.xpValue));
+                            this.handleEnemyDeath(enemy);
                             this.enemies.splice(i, 1);
                         }
                     }
@@ -944,8 +1252,7 @@ class Game {
                             proj.hitEnemies.add(enemy);
                             const died = enemy.takeDamage(proj.damage);
                             if (died) {
-                                this.killCount++;
-                                this.experienceGems.push(new ExperienceGem(enemy.x, enemy.y, enemy.xpValue));
+                                this.handleEnemyDeath(enemy);
                                 const idx = this.enemies.indexOf(enemy);
                                 if (idx > -1) this.enemies.splice(idx, 1);
                             }
@@ -971,8 +1278,7 @@ class Game {
                         proj.hitCooldown[enemy] = now;
                         const died = enemy.takeDamage(proj.damage);
                         if (died) {
-                            this.killCount++;
-                            this.experienceGems.push(new ExperienceGem(enemy.x, enemy.y, enemy.xpValue));
+                            this.handleEnemyDeath(enemy);
                             const idx = this.enemies.indexOf(enemy);
                             if (idx > -1) this.enemies.splice(idx, 1);
                         }
@@ -996,28 +1302,26 @@ class Game {
                     const died = enemy.takeDamage(proj.damage);
 
                     if (died) {
-                        this.killCount++;
-                        this.experienceGems.push(new ExperienceGem(enemy.x, enemy.y, enemy.xpValue));
+                        this.handleEnemyDeath(enemy);
                         this.enemies.splice(i, 1);
                     }
 
                     // Fireball explosion
                     if (proj.isFireball) {
-                        this.enemies.forEach(e => {
+                        for (let j = this.enemies.length - 1; j >= 0; j--) {
+                            const e = this.enemies[j];
                             const edx = e.x - proj.x;
                             const edy = e.y - proj.y;
                             const edist = Math.sqrt(edx * edx + edy * edy);
 
                             if (edist < proj.explosionRadius) {
-                                const died = e.takeDamage(proj.damage * 0.5);
-                                if (died) {
-                                    this.killCount++;
-                                    this.experienceGems.push(new ExperienceGem(e.x, e.y, e.xpValue));
-                                    const idx = this.enemies.indexOf(e);
-                                    if (idx > -1) this.enemies.splice(idx, 1);
+                                const splashDied = e.takeDamage(proj.damage * 0.5);
+                                if (splashDied) {
+                                    this.handleEnemyDeath(e);
+                                    this.enemies.splice(j, 1);
                                 }
                             }
-                        });
+                        }
                     }
 
                     return false;
@@ -1038,6 +1342,26 @@ class Game {
                 const leveledUp = this.player.gainXP(gem.value);
                 if (leveledUp) {
                     this.showLevelUpMenu();
+                }
+                return false;
+            }
+            return true;
+        });
+
+        // Update enemy projectiles
+        this.enemyProjectiles = this.enemyProjectiles.filter(proj => {
+            const alive = proj.update(deltaTime);
+            if (!alive) return false;
+
+            // Check collision with player
+            const dx = proj.x - this.player.x;
+            const dy = proj.y - this.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < proj.radius + this.player.radius) {
+                const died = this.player.takeDamage(proj.damage);
+                if (died) {
+                    this.gameOver();
                 }
                 return false;
             }
@@ -1141,6 +1465,11 @@ class Game {
             if (weapon instanceof GarlicAura) {
                 weapon.draw();
             }
+        });
+
+        // Draw enemy projectiles
+        this.enemyProjectiles.forEach(proj => {
+            if (proj.draw) proj.draw();
         });
 
         // Draw player
