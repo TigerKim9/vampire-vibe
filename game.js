@@ -509,10 +509,10 @@ class Weapon {
         this.level = 1;
     }
 
-    update(deltaTime, enemies, projectiles) {
+    update(deltaTime, enemies, projectiles, game) {
         this.timer -= deltaTime;
         if (this.timer <= 0) {
-            this.attack(enemies, projectiles);
+            this.attack(enemies, projectiles, game);
             this.timer = this.cooldown;
         }
     }
@@ -701,26 +701,31 @@ class GarlicAura extends Weapon {
         this.rotation = 0;
     }
 
-    update(deltaTime, enemies, projectiles) {
+    update(deltaTime, enemies, projectiles, game) {
         this.rotation += deltaTime * 0.002;
         this.timer -= deltaTime;
 
         if (this.timer <= 0) {
-            this.attack(enemies, projectiles);
+            this.attack(enemies, projectiles, game);
             this.timer = this.cooldown;
         }
     }
 
-    attack(enemies, projectiles) {
-        enemies.forEach(enemy => {
+    attack(enemies, projectiles, game) {
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const enemy = enemies[i];
             const dx = enemy.x - this.player.x;
             const dy = enemy.y - this.player.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist < this.radius + enemy.radius) {
-                enemy.takeDamage(this.damage * this.player.stats.damage * 0.016);
+                const died = enemy.takeDamage(this.damage * this.player.stats.damage * 0.016);
+                if (died && game) {
+                    game.handleEnemyDeath(enemy);
+                    enemies.splice(i, 1);
+                }
             }
-        });
+        }
     }
 
     draw() {
@@ -831,11 +836,11 @@ class Axe extends Weapon {
         this.orbitRadius = 80;
     }
 
-    attack(enemies, projectiles) {
+    attack(enemies, projectiles, game) {
         // Axes orbit around player continuously
     }
 
-    update(deltaTime, enemies, projectiles) {
+    update(deltaTime, enemies, projectiles, game) {
         // Create orbiting axes if they don't exist
         const existingAxes = projectiles.filter(p => p.isAxe && p.weaponId === this);
 
@@ -1164,7 +1169,7 @@ class Game {
 
         // Update weapons
         this.player.weapons.forEach(weapon => {
-            weapon.update(deltaTime, this.enemies, this.projectiles);
+            weapon.update(deltaTime, this.enemies, this.projectiles, this);
         });
 
         // Update projectiles
@@ -1175,14 +1180,19 @@ class Game {
                 if (proj.age >= proj.duration) return false;
 
                 // Damage enemies in pool
-                this.enemies.forEach(enemy => {
+                for (let i = this.enemies.length - 1; i >= 0; i--) {
+                    const enemy = this.enemies[i];
                     const dx = enemy.x - proj.x;
                     const dy = enemy.y - proj.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < proj.radius) {
-                        enemy.takeDamage(proj.damage * 0.016);
+                        const died = enemy.takeDamage(proj.damage * 0.016);
+                        if (died) {
+                            this.handleEnemyDeath(enemy);
+                            this.enemies.splice(i, 1);
+                        }
                     }
-                });
+                }
                 return true;
             }
 
