@@ -663,7 +663,7 @@ class Lightning extends Weapon {
 // Holy Water weapon
 class HolyWater extends Weapon {
     constructor(player) {
-        super(player, '성수', 6, 2500);
+        super(player, '성수', 6, 2500, '💧');
         this.poolDuration = 3000;
         this.poolRadius = 60;
     }
@@ -697,7 +697,7 @@ class HolyWater extends Weapon {
 // Garlic Aura weapon
 class GarlicAura extends Weapon {
     constructor(player) {
-        super(player, '마늘 오라', 3, 500);
+        super(player, '마늘 오라', 3, 500, '🧄');
         this.radius = 80;
         this.rotation = 0;
     }
@@ -757,7 +757,7 @@ class GarlicAura extends Weapon {
 // Boomerang weapon
 class Boomerang extends Weapon {
     constructor(player) {
-        super(player, '부메랑', 7, 1500);
+        super(player, '부메랑', 7, 1500, '🪃');
         this.count = 1;
     }
 
@@ -794,7 +794,7 @@ class Boomerang extends Weapon {
 // Laser weapon
 class Laser extends Weapon {
     constructor(player) {
-        super(player, '레이저', 15, 3500);
+        super(player, '레이저', 15, 3500, '🔫');
         this.width = 20;
         this.length = 600;
     }
@@ -832,7 +832,7 @@ class Laser extends Weapon {
 // Axe weapon
 class Axe extends Weapon {
     constructor(player) {
-        super(player, '도끼', 10, 1200);
+        super(player, '도끼', 10, 1200, '🪓');
         this.count = 1;
         this.orbitRadius = 80;
     }
@@ -894,10 +894,11 @@ class Axe extends Weapon {
 
 // Passive Item base class
 class PassiveItem {
-    constructor(player, name, description) {
+    constructor(player, name, description, icon = '📦') {
         this.player = player;
         this.name = name;
         this.description = description;
+        this.icon = icon;
         this.level = 1;
     }
 
@@ -914,7 +915,7 @@ class PassiveItem {
 // Armor passive item
 class Armor extends PassiveItem {
     constructor(player) {
-        super(player, '방어구', '받는 데미지 감소');
+        super(player, '방어구', '받는 데미지 감소', '🛡️');
     }
 
     apply() {
@@ -925,7 +926,7 @@ class Armor extends PassiveItem {
 // Wings passive item
 class Wings extends PassiveItem {
     constructor(player) {
-        super(player, '날개', '이동 속도 증가');
+        super(player, '날개', '이동 속도 증가', '🪽');
     }
 
     apply() {
@@ -936,7 +937,7 @@ class Wings extends PassiveItem {
 // Spinach passive item
 class Spinach extends PassiveItem {
     constructor(player) {
-        super(player, '시금치', '공격력 증가');
+        super(player, '시금치', '공격력 증가', '🥬');
     }
 
     apply() {
@@ -947,7 +948,7 @@ class Spinach extends PassiveItem {
 // Clover passive item
 class Clover extends PassiveItem {
     constructor(player) {
-        super(player, '클로버', '크리티컬 확률 증가');
+        super(player, '클로버', '크리티컬 확률 증가', '🍀');
     }
 
     apply() {
@@ -958,7 +959,7 @@ class Clover extends PassiveItem {
 // Crown passive item
 class Crown extends PassiveItem {
     constructor(player) {
-        super(player, '왕관', '경험치 획득량 증가');
+        super(player, '왕관', '경험치 획득량 증가', '👑');
     }
 
     apply() {
@@ -969,7 +970,7 @@ class Crown extends PassiveItem {
 // Magnet passive item
 class Magnet extends PassiveItem {
     constructor(player) {
-        super(player, '자석', '경험치 습득 범위 증가');
+        super(player, '자석', '경험치 습득 범위 증가', '🧲');
     }
 
     apply() {
@@ -1518,9 +1519,13 @@ class Game {
         upgrades.forEach(upgrade => {
             const div = document.createElement('div');
             div.className = 'upgrade-option';
+            const iconHtml = upgrade.icon ? `<span class="upgrade-icon">${upgrade.icon}</span>` : '';
             div.innerHTML = `
-                <h3>${upgrade.name}</h3>
-                <p>${upgrade.description}</p>
+                ${iconHtml}
+                <div class="upgrade-text">
+                    <h3>${upgrade.name}</h3>
+                    <p>${upgrade.description}</p>
+                </div>
             `;
             div.addEventListener('click', () => {
                 upgrade.apply();
@@ -1538,6 +1543,7 @@ class Game {
             {
                 name: '체력 증가',
                 description: '최대 체력이 20 증가합니다',
+                icon: '❤️',
                 apply: () => {
                     this.player.maxHealth += 20;
                     this.player.stats.maxHealth += 20;
@@ -1547,6 +1553,7 @@ class Game {
             {
                 name: '이동 속도 증가',
                 description: '이동 속도가 10% 증가합니다',
+                icon: '👟',
                 apply: () => {
                     this.player.speed *= 1.1;
                 }
@@ -1554,6 +1561,7 @@ class Game {
             {
                 name: '공격력 증가',
                 description: '모든 무기의 공격력이 20% 증가합니다',
+                icon: '💪',
                 apply: () => {
                     this.player.stats.damage *= 1.2;
                 }
@@ -1561,6 +1569,7 @@ class Game {
             {
                 name: '체력 재생',
                 description: '초당 체력이 1씩 회복됩니다',
+                icon: '💚',
                 apply: () => {
                     this.player.stats.regeneration += 1;
                 }
@@ -1568,6 +1577,7 @@ class Game {
             {
                 name: '경험치 범위 증가',
                 description: '경험치 습득 범위가 증가합니다',
+                icon: '✨',
                 apply: () => {
                     this.player.stats.pickupRange += 30;
                 }
@@ -1579,6 +1589,7 @@ class Game {
             allUpgrades.push({
                 name: '화염구',
                 description: '폭발하는 화염구를 발사합니다 (새 무기)',
+                icon: '🔥',
                 apply: () => {
                     this.player.addWeapon(new Fireball(this.player));
                 }
@@ -1589,6 +1600,7 @@ class Game {
             allUpgrades.push({
                 name: '번개',
                 description: '적들을 연쇄 타격하는 번개 공격 (새 무기)',
+                icon: '⚡',
                 apply: () => {
                     this.player.addWeapon(new Lightning(this.player));
                 }
@@ -1599,6 +1611,7 @@ class Game {
             allUpgrades.push({
                 name: '성수',
                 description: '땅에 데미지를 주는 성수를 투척합니다 (새 무기)',
+                icon: '💧',
                 apply: () => {
                     this.player.addWeapon(new HolyWater(this.player));
                 }
@@ -1609,6 +1622,7 @@ class Game {
             allUpgrades.push({
                 name: '마늘 오라',
                 description: '주변에 지속 데미지를 주는 마늘 오라 (새 무기)',
+                icon: '🧄',
                 apply: () => {
                     this.player.addWeapon(new GarlicAura(this.player));
                 }
@@ -1619,6 +1633,7 @@ class Game {
             allUpgrades.push({
                 name: '부메랑',
                 description: '되돌아오는 부메랑을 발사합니다 (새 무기)',
+                icon: '🪃',
                 apply: () => {
                     this.player.addWeapon(new Boomerang(this.player));
                 }
@@ -1629,6 +1644,7 @@ class Game {
             allUpgrades.push({
                 name: '레이저',
                 description: '관통하는 레이저 빔을 발사합니다 (새 무기)',
+                icon: '🔫',
                 apply: () => {
                     this.player.addWeapon(new Laser(this.player));
                 }
@@ -1639,6 +1655,7 @@ class Game {
             allUpgrades.push({
                 name: '도끼',
                 description: '주변을 회전하는 도끼 (새 무기)',
+                icon: '🪓',
                 apply: () => {
                     this.player.addWeapon(new Axe(this.player));
                 }
@@ -1650,6 +1667,7 @@ class Game {
             allUpgrades.push({
                 name: '방어구',
                 description: '받는 데미지 5% 감소',
+                icon: '🛡️',
                 apply: () => {
                     const item = new Armor(this.player);
                     item.apply();
@@ -1662,6 +1680,7 @@ class Game {
             allUpgrades.push({
                 name: '날개',
                 description: '이동 속도 대폭 증가',
+                icon: '🪽',
                 apply: () => {
                     const item = new Wings(this.player);
                     item.apply();
@@ -1674,6 +1693,7 @@ class Game {
             allUpgrades.push({
                 name: '시금치',
                 description: '공격력 대폭 증가',
+                icon: '🥬',
                 apply: () => {
                     const item = new Spinach(this.player);
                     item.apply();
@@ -1686,6 +1706,7 @@ class Game {
             allUpgrades.push({
                 name: '클로버',
                 description: '크리티컬 확률 8% 증가',
+                icon: '🍀',
                 apply: () => {
                     const item = new Clover(this.player);
                     item.apply();
@@ -1698,6 +1719,7 @@ class Game {
             allUpgrades.push({
                 name: '왕관',
                 description: '경험치 획득량 증가',
+                icon: '👑',
                 apply: () => {
                     const item = new Crown(this.player);
                     item.apply();
@@ -1710,6 +1732,7 @@ class Game {
             allUpgrades.push({
                 name: '자석',
                 description: '경험치 습득 범위 대폭 증가',
+                icon: '🧲',
                 apply: () => {
                     const item = new Magnet(this.player);
                     item.apply();
@@ -1723,6 +1746,7 @@ class Game {
             allUpgrades.push({
                 name: `${weapon.name} 강화`,
                 description: `${weapon.name}의 위력을 강화합니다 (레벨 ${weapon.level} → ${weapon.level + 1})`,
+                icon: weapon.icon,
                 apply: () => {
                     weapon.upgrade();
                 }
@@ -1734,6 +1758,7 @@ class Game {
             allUpgrades.push({
                 name: `${item.name} 강화`,
                 description: `${item.description} 효과 증가 (레벨 ${item.level} → ${item.level + 1})`,
+                icon: item.icon,
                 apply: () => {
                     item.upgrade();
                 }
